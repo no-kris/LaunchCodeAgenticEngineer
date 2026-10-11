@@ -34,11 +34,13 @@ RUN curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 RUN mkdir -p /root/.claude
 COPY settings.json /root/.claude/settings.json
 COPY statusline.sh /root/.claude/statusline.sh
-RUN chmod +x /root/.claude/statusline.sh
+RUN sed -i 's/\r$//' /root/.claude/statusline.sh \
+    && chmod +x /root/.claude/statusline.sh
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Student shell quality-of-life improvements
 RUN echo 'export PS1="ai-course:\\w# "' >> /root/.bashrc && \
