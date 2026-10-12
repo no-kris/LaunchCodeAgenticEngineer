@@ -8,7 +8,7 @@ Clone the repo and build locally:
 
 ```bash
 git clone https://github.com/LaunchCodeEducation/LaunchCodeAgenticEngineer.git
-cd LaunchCodeAgenticEngineer
+cd LaunchCodeAgenticEngineer/module_1
 docker build -t agentic_engineer_1 .
 docker run -it --rm -v claude-auth:/claude-auth -p 8501:8501 -v "$PWD":/workspace agentic_engineer_1
 ```
@@ -21,7 +21,29 @@ docker run -it --rm -v claude-auth:/claude-auth -p 8501:8501 -v "$PWD":/workspac
 
 > **Claude authentication:** The `-v claude-auth:/claude-auth` mount is a shared named volume that persists your Claude Code login across container runs — and across every course module. You go through Claude's first-run onboarding and log in once; every later container restores your credential and skips onboarding. Only your credential is stored on the volume — skills, agents, settings, the status line, and each image's MCP servers stay baked into the image.
 
+## Project Structure
+
+This folder is Module 1 of the course repo. Modules 2 and 3 live in sibling folders (`../module_2`, `../module_3`) and build on this environment.
+
+```
+module_1/
+├── README.md                # This file
+├── CLAUDE.md                # Guidance for Claude Code when working in this module
+├── Dockerfile               # Python 3.12 image with Claude Code, OpenCode, and ngrok
+├── docker-entrypoint.sh     # Restores/persists the Claude login via the claude-auth volume
+├── requirements.txt         # Python dependencies installed in the image
+├── settings.json            # Claude Code settings copied to /root/.claude/settings.json
+├── statusline.sh            # Claude Code status line (model, context usage, session cost)
+├── agent_docker_check.md    # Example agent prompt: verify the Docker build
+├── module_x.py              # Business-rule utilities (parallel-session example, Session A)
+└── module_y.py              # Formatting/reporting utilities (parallel-session example, Session B)
+```
+
+`module_x.py` and `module_y.py` are small example modules for running two Claude Code sessions in parallel: Session A writes unit tests for `module_x.py`, and Session B documents `module_y.py`.
+
 ## Build
+
+Run build commands from inside the `module_1/` folder, where the `Dockerfile` lives.
 
 ```bash
 docker build -t agentic_engineer_1 .

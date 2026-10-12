@@ -10,12 +10,36 @@ from __future__ import annotations
 
 
 def format_currency(amount: float) -> str:
+    """Format a number as a US-dollar string with thousands separators.
+
+    Negative amounts get a leading minus sign before the dollar sign.
+
+    Args:
+        amount: The monetary value to format.
+
+    Returns:
+        The amount rounded to two decimal places, e.g. ``"$1,234.50"`` or
+        ``"-$12.00"``.
+    """
     if amount < 0:
         return f"-${abs(amount):,.2f}"
     return f"${amount:,.2f}"
 
 
 def build_report_title(project_name: str, version: str) -> str:
+    """Build a report title in the form ``"<project> — <version>"``.
+
+    Internal whitespace in the project name is collapsed to single spaces and
+    both inputs are stripped. Blank values fall back to defaults.
+
+    Args:
+        project_name: Name of the project. Defaults to ``"Untitled Project"``
+            if blank.
+        version: Version label. Defaults to ``"draft"`` if blank.
+
+    Returns:
+        The title, joined with an em dash.
+    """
     clean_project = " ".join(project_name.strip().split())
     clean_version = version.strip()
 
@@ -28,6 +52,22 @@ def build_report_title(project_name: str, version: str) -> str:
 
 
 def mask_email(email: str) -> str:
+    """Mask the local part of an email address for display.
+
+    The first and last characters of the local part are kept and the rest are
+    replaced with ``*``. Local parts of one or two characters are masked as
+    ``"*"`` and ``"<first>*"`` respectively. The domain is lowercased.
+
+    Args:
+        email: The email address to mask. Surrounding whitespace is ignored.
+
+    Returns:
+        The masked address, e.g. ``"j**n@example.com"`` for ``"john@Example.com"``.
+
+    Raises:
+        ValueError: If the address has no ``@``, or the local part or domain
+            is empty.
+    """
     email = email.strip()
     if "@" not in email:
         raise ValueError("email must contain @")
@@ -47,6 +87,20 @@ def mask_email(email: str) -> str:
 
 
 def generate_summary_line(name: str, status: str, score: int) -> str:
+    """Build a one-line summary in the form ``"<Name>: <status> (<score>)"``.
+
+    The name is whitespace-collapsed and title-cased (``"Unknown"`` if blank).
+    The status is stripped, lowercased, and has underscores replaced with
+    spaces.
+
+    Args:
+        name: Display name of the subject.
+        status: Status label, e.g. ``"IN_PROGRESS"``.
+        score: Score shown in parentheses.
+
+    Returns:
+        The formatted summary line, e.g. ``"Ada Lovelace: in progress (92)"``.
+    """
     display_name = " ".join(name.strip().split()).title()
     display_status = status.strip().lower().replace("_", " ")
 
@@ -57,6 +111,23 @@ def generate_summary_line(name: str, status: str, score: int) -> str:
 
 
 def create_markdown_table(rows: list[dict[str, object]], columns: list[str]) -> str:
+    """Render a list of dicts as a Markdown table.
+
+    Columns appear in the order given. A row missing a column renders an empty
+    cell; keys not listed in ``columns`` are ignored. Values are converted with
+    ``str()`` and are not escaped.
+
+    Args:
+        rows: Table rows, each mapping column name to cell value.
+        columns: Column names to include, used as the header row.
+
+    Returns:
+        The table as a newline-separated string (header, separator, then one
+        line per row).
+
+    Raises:
+        ValueError: If ``columns`` is empty.
+    """
     if not columns:
         raise ValueError("columns cannot be empty")
 
@@ -72,6 +143,23 @@ def create_markdown_table(rows: list[dict[str, object]], columns: list[str]) -> 
 
 
 def truncate_text(text: str, max_length: int = 80) -> str:
+    """Collapse whitespace and truncate text to a maximum length.
+
+    Text longer than ``max_length`` is cut, stripped of trailing whitespace,
+    and suffixed with ``"..."`` so the result is at most ``max_length``
+    characters.
+
+    Args:
+        text: The text to clean and truncate.
+        max_length: Maximum length of the result, including the ellipsis.
+            Must be at least 4.
+
+    Returns:
+        The whitespace-normalized text, truncated with ``"..."`` if needed.
+
+    Raises:
+        ValueError: If ``max_length`` is less than 4.
+    """
     if max_length < 4:
         raise ValueError("max_length must be at least 4")
 
