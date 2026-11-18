@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//root/.claude/agents/**)",
+      "Read(//root/.claude/**)",
+      "mcp__coursetools__file_read",
+      "mcp__coursetools__codebase_search",
+      "mcp__storage__list_entries",
+      "mcp__retrieval__retrieve",
+      "mcp__coursetools__file_write",
+      "mcp__storage__write_entry",
+      "mcp__coursetools__test_runner"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "coursetools",
+    "storage",
+    "retrieval"
+  ]
+}

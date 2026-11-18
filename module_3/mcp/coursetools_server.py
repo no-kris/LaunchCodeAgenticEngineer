@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -116,11 +117,57 @@ def shell(role: str, command: str) -> str:
     return f"Simulated shell command only; nothing executed: {command}"
 
 
+TEST_TIMEOUT_SECONDS = int(os.environ.get("COURSETOOLS_TEST_TIMEOUT", "300"))
+MAX_OUTPUT_CHARS = 20000
+
+
+def _run_fixed(cmd: list[str], cwd: Path) -> tuple[int, str]:
+    """Run one fixed, allow-listed command (no shell) and return (exit code, output)."""
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=TEST_TIMEOUT_SECONDS,
+            env={**os.environ, "CI": "1", "FORCE_COLOR": "0"},
+        )
+    except subprocess.TimeoutExpired:
+        return 124, f"Timed out after {TEST_TIMEOUT_SECONDS}s: {' '.join(cmd)}"
+    except FileNotFoundError as exc:
+        return 127, f"Command not found: {exc}"
+    output = (proc.stdout or "") + (proc.stderr or "")
+    if len(output) > MAX_OUTPUT_CHARS:
+        output = "...[truncated]...\n" + output[-MAX_OUTPUT_CHARS:]
+    return proc.returncode, output
+
+
 @mcp.tool()
-def test_runner(role: str, suite: str = "default") -> str:
-    """Return a realistic dummy test result for the requested suite."""
+def test_runner(role: str, path: str = ".", suite: str = "default", install: bool = True) -> str:
+    """Run a Node project's real test suite: `npm install` (if requested) then `npm test`.
+
+    `path` is the project directory (relative to the project root) containing
+    package.json. Only these two fixed commands are executed; no arbitrary shell
+    input is accepted. `suite` is accepted for backward compatibility and ignored.
+    Returns exit codes and the real command output.
+    """
     authorize("test_runner", role)
-    return f"PASS: dummy test suite '{suite}' completed successfully."
+    project_dir = safe_path(path)
+    if not (project_dir / "package.json").is_file():
+        raise FileNotFoundError(f"No package.json in {path}")
+
+    report: list[str] = [f"Project: {path}"]
+    if install:
+        code, out = _run_fixed(["npm", "install", "--no-audit", "--no-fund"], project_dir)
+        report.append(f"== npm install (exit {code}) ==\n{out}")
+        if code != 0:
+            report.append("RESULT: ERROR (install failed; tests not run)")
+            return "\n".join(report)
+
+    code, out = _run_fixed(["npm", "test"], project_dir)
+    report.append(f"== npm test (exit {code}) ==\n{out}")
+    report.append(f"RESULT: {'PASS' if code == 0 else 'FAIL'} (npm test exit code {code})")
+    return "\n".join(report)
 
 
 @mcp.tool()

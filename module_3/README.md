@@ -9,12 +9,15 @@ Docker development environment for LaunchCode's **Agentic Programming** course, 
 
 ## Quick Start
 
+> **Network:** These commands use `--network agent-internal` instead of `--network none` so the container can reach the local MCP servers and the external APIs the workflow needs. Create it once with `docker network create agent-internal` if it does not exist.
+
 Build and run locally:
 
 ```bash
 cd module_3
 docker build -t agentic_engineer_3 .
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 -p 8502:8502 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -30,6 +33,7 @@ Or pull the pre-built image from DockerHub:
 
 ```bash
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 -p 8502:8502 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -45,6 +49,7 @@ Full setup with Slack and Gmail (reads credentials from your shell environment):
 
 ```bash
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 -p 8502:8502 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -81,6 +86,7 @@ docker build --no-cache -t agentic_engineer_3 .
 ```bash
 # macOS / Linux
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 -p 8502:8502 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -93,6 +99,7 @@ docker run -it --rm \
 
 # Windows (PowerShell)
 docker run -it --rm `
+  --network agent-internal `
   -p 8501:8501 -p 8502:8502 `
   -p 6274:6274 -p 3000:3000 `
   -p 8001:8001 -p 8002:8002 `
@@ -133,6 +140,7 @@ docker exec -it <container_id_or_name> /bin/bash
 
 ```bash
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -182,6 +190,7 @@ MCP (Model Context Protocol) servers extend Claude Code so that prompts can take
 
 ```bash
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \
@@ -399,6 +408,7 @@ Once published, students can run the image directly without cloning the repo or 
 
 ```bash
 docker run -it --rm \
+  --network agent-internal \
   -p 8501:8501 -p 8502:8502 \
   -p 6274:6274 -p 3000:3000 \
   -p 8001:8001 -p 8002:8002 \

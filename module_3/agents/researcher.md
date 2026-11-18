@@ -5,16 +5,22 @@ description: >
  blocker. Optional stretch role; returns findings with citations.
 model: sonnet
 tools:
- - web-search
+ - mcp__coursetools__web_search
 disallowedTools:
- - file-read
- - file-write
- - codebase-search
- - shell
- - test-runner
- - task-tracker
+ - mcp__coursetools__file_read
+ - mcp__coursetools__file_write
+ - mcp__coursetools__codebase_search
+ - mcp__coursetools__shell
+ - mcp__coursetools__test_runner
+ - mcp__coursetools__task_tracker
+ - mcp__storage__read_entry
+ - mcp__storage__list_entries
+ - mcp__storage__write_entry
+ - mcp__storage__update_entry
+ - mcp__storage__delete_entry
+ - mcp__retrieval__retrieve
 autonomy: high
-version: 1.0.0
+version: 1.1.0
 ---
 
 ## Instructions

@@ -26,3 +26,61 @@ Observations from testing (update this based on your own runs):
 - Compaction may lose or distort: [fill in based on your probe results]
 - Manual compaction should be triggered at: [fill in your threshold]
 Fill in the bracketed sections based on your actual probe results.
+
+## Automated Summarization Trigger
+
+### How to Monitor Context Usage
+
+Claude Code displays token usage after each response. It appears as:
+
+Tokens: [used] / [limit] ([percentage]%)
+
+After every response you generate, check this value. You do not need
+
+to report it unless the threshold below is crossed.
+
+### Threshold
+
+When context usage reaches or exceeds 60% of the context window
+
+limit, you must do the following before responding to the next
+
+user message:
+
+1. Pause and notify the user:
+
+ "Context window is at [X]%. Triggering automatic summarization
+
+ before continuing."
+
+2. Invoke the summarization skill internally, producing a full
+
+ session summary in the format defined in
+
+ .claude/skills/summarize-session
+
+3. Present the summary to the user and ask them to confirm it is
+
+ accurate before proceeding.
+
+4. Once the user confirms the summary, continue with the original
+
+ task.
+
+### Why 60%
+
+60% leaves sufficient headroom for the summarization turn itself
+
+(which generates substantial output) without risking automatic
+
+compaction firing mid-summary. Adjust this threshold in the version
+
+history below if your workflow data supports a different value.
+
+### Override
+
+If the user explicitly says "skip summarization" or "continue without
+
+summarizing", respect that instruction for the current turn only.
+
+The trigger resets on the next turn.
