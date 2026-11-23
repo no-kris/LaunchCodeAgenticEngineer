@@ -1,0 +1,159 @@
+You are running a full integration test suite against two live MCP servers: `storage`
+(tools: mcp__storage__write_entry, read_entry, list_entries, update_entry, delete_entry)
+and `retrieval` (tool: mcp__retrieval__retrieve). Before testing, read
+/workspace/mcp/storage/server.py and /workspace/mcp/retrieval/server.py in full — the
+code is ground truth, not the SCHEMA.md files, if the two ever disagree.
+
+Use TEST_PROJECT = "proj-inttest" for all storage tests (isolated from production data).
+Use project_id = "proj-csv" for retrieval tests (the only project actually indexed from
+/memory/reference). Never write, update, or delete anything under project "proj-csv" —
+read-only for that project.
+
+Run every test below, record actual behavior, and mark each PASS or FAIL against the
+stated expectation. Do not stop at the first failure — run the full matrix and report
+all results at the end.
+
+=== STORAGE: write_entry ===
+S1. classification="public" → expect success, returns {entry_id}.
+S2. classification="internal" → expect success.
+S3. classification="confidential" → expect rejection (server only accepts public/internal writes).
+S4. classification="secret" → expect rejection.
+S5. classification="top-secret" (not in vocabulary) → expect rejection.
+S6. project_id="proj_inttest" (underscore, violates ^[A-Za-z0-9-]+$) → expect rejection.
+S7a. entry_type="" → expect rejection.
+S7b. title="   " (whitespace only) → expect rejection.
+S7c. content="" → expect rejection.
+S8. Omit calling_role entirely → expect success with calling_role defaulting to "unknown".
+S9. Inspect /memory/storage-audit.log before and after S1/S2/S8: confirm exactly one new
+    JSON line per successful write (none for S3-S7), each with correct
+    operation/project_id/entry_id/classification/calling_role.
+
+=== STORAGE: read_entry ===
+R1. Read back the entry from S1 → fields match exactly what was written.
+R2. Read that entry's id but with project_id="proj-csv" → expect not-found (project scoping).
+R3. Read a random nonexistent entry_id under TEST_PROJECT → expect not-found.
+R4. project_id="proj csv" (space) → expect validation error.
+R5. Confirm audit log line count is unchanged after R1-R4 (reads are never audited).
+
+=== STORAGE: list_entries ===
+L1. List TEST_PROJECT, no filter → includes entries from S1/S2/S8; each row has only
+    entry_id/title/entry_type/classification/last_updated — no "content" key.
+L2. List TEST_PROJECT filtered by the entry_type used in S1 → only that entry returned.
+L3. List a brand-new unused project_id → expect empty list, not an error.
+L4. project_id="proj@inttest" → expect validation error.
+
+=== STORAGE: update_entry ===
+U1. Update the S1 entry's content → success; read_entry confirms new content and that
+    classification is still "public" (preserved).
+U2. Update a nonexistent entry_id → expect error.
+U3. Update with content="" → expect validation error.
+U4. Confirm audit log gained an update_entry line carrying the entry's original
+    classification ("public"), not a new one.
+
+=== STORAGE: delete_entry ===
+D1. Delete the S2 entry → success.
+D2. read_entry on that id → expect not-found (soft delete hides it).
+D3. list_entries on TEST_PROJECT → deleted entry absent.
+D5. delete_entry a nonexistent id → expect error.
+D6. Confirm audit log gained a delete_entry line with the preserved original classification.
+
+=== STORAGE: cross-project isolation ===
+X1. Take the entry_id from S8 (written under TEST_PROJECT). Attempt read_entry,
+    update_entry, and delete_entry on it using project_id="proj-csv" instead → all three
+    must fail/not-found. Confirms scoping is enforced per-query, not just at write time.
+
+=== RETRIEVAL: retrieve ===
+V1. retrieve("What file format did we choose for the export?", "proj-csv") → expect
+    ≥1 result; plausibly sourced from decision-csv-format.md.
+V2. Default classification_ceiling="internal" → cost-breakdown.md (confidential) must
+    NEVER appear in any result across these tests unless ceiling is raised (see V4).
+V3. Re-run V1 with classification_ceiling="public" → expect EMPTY results (every doc in
+    this corpus is internal or confidential; none are public).
+V4. retrieve("What are the cost figures for the CSV export feature?", "proj-csv",
+    classification_ceiling="confidential") → now cost-breakdown.md becomes eligible;
+    confirm it can appear, proving the ceiling gate works in both directions.
+V5. retrieve with metadata_filters={"doc_type":"decision"} → results restricted to
+    decision-csv-format.md / security-export-visibility.md only.
+V6. retrieve with metadata_filters={"doc_type":"finance"} at default ceiling="internal"
+    → expect EMPTY (cost-breakdown.md is the only finance doc and is confidential —
+    confirms the classification filter is applied before/alongside the metadata filter,
+    not bypassable via doc_type).
+V7. metadata_filters={"author":"x"} (unsupported key) → expect ValueError.
+V8. top_k=0 → expect ValueError.
+V9. top_k=21 → expect ValueError.
+V10. top_k=1 → expect exactly one result (assuming matches exist).
+V11. query="" → expect ValueError.
+V12. project_id="proj_csv" (underscore) → expect ValueError.
+V13. project_id="proj-nonexistent" → expect empty list, not an error.
+V14. A gibberish query with no semantic or keyword overlap with the corpus
+    (e.g. "xyzzy quantum zeppelin fondue") → expect empty list.
+V15. Every result object returned in V1/V4/V5 must include all six keys:
+    source_document, chunk_index, excerpt, classification, similarity_score,
+    retrieval_method — flag any missing field as a schema-contract FAIL.
+V16. If any test surfaces a retrieval_method="keyword" result, confirm similarity_score
+    is null for it and that source_document/chunk_index are still populated (citation
+    enforcement applies to keyword fallback too).
+
+=== INTEGRATION / CROSS-SERVER BOUNDARY ===
+I1. write_entry a new internal entry under project_id="proj-csv" describing a fictitious
+    decision with distinctive keywords, then immediately retrieve() on "proj-csv" with a
+    query about those keywords → expect it NOT to appear. This demonstrates storage and
+    retrieval are decoupled: retrieval's index is a static snapshot of /memory/reference
+    built once at server startup, with no live link to storage.db. Clean up this entry
+=== STORAGE: cross-project isolation ===
+X1. Take the entry_id from S8 (written under TEST_PROJECT). Attempt read_entry,
+    update_entry, and delete_entry on it using project_id="proj-csv" instead → all three
+    must fail/not-found. Confirms scoping is enforced per-query, not just at write time.
+
+=== RETRIEVAL: retrieve ===
+V1. retrieve("What file format did we choose for the export?", "proj-csv") → expect
+    ≥1 result; plausibly sourced from decision-csv-format.md.
+V2. Default classification_ceiling="internal" → cost-breakdown.md (confidential) must
+    NEVER appear in any result across these tests unless ceiling is raised (see V4).
+V3. Re-run V1 with classification_ceiling="public" → expect EMPTY results (every doc in
+    this corpus is internal or confidential; none are public).
+V4. retrieve("What are the cost figures for the CSV export feature?", "proj-csv",
+    classification_ceiling="confidential") → now cost-breakdown.md becomes eligible;
+    confirm it can appear, proving the ceiling gate works in both directions.
+V5. retrieve with metadata_filters={"doc_type":"decision"} → results restricted to
+    decision-csv-format.md / security-export-visibility.md only.
+V6. retrieve with metadata_filters={"doc_type":"finance"} at default ceiling="internal"
+    → expect EMPTY (cost-breakdown.md is the only finance doc and is confidential —
+    confirms the classification filter is applied before/alongside the metadata filter,
+    not bypassable via doc_type).
+V7. metadata_filters={"author":"x"} (unsupported key) → expect ValueError.
+V8. top_k=0 → expect ValueError.
+V9. top_k=21 → expect ValueError.
+V10. top_k=1 → expect exactly one result (assuming matches exist).
+V11. query="" → expect ValueError.
+V12. project_id="proj_csv" (underscore) → expect ValueError.
+V13. project_id="proj-nonexistent" → expect empty list, not an error.
+V14. A gibberish query with no semantic or keyword overlap with the corpus
+    (e.g. "xyzzy quantum zeppelin fondue") → expect empty list.
+V15. Every result object returned in V1/V4/V5 must include all six keys:
+    source_document, chunk_index, excerpt, classification, similarity_score,
+    retrieval_method — flag any missing field as a schema-contract FAIL.
+V16. If any test surfaces a retrieval_method="keyword" result, confirm similarity_score
+    is null for it and that source_document/chunk_index are still populated (citation
+    enforcement applies to keyword fallback too).
+
+=== INTEGRATION / CROSS-SERVER BOUNDARY ===
+I1. write_entry a new internal entry under project_id="proj-csv" describing a fictitious
+    decision with distinctive keywords, then immediately retrieve() on "proj-csv" with a
+    query about those keywords → expect it NOT to appear. This demonstrates storage and
+    retrieval are decoupled: retrieval's index is a static snapshot of /memory/reference
+    built once at server startup, with no live link to storage.db. Clean up this entry
+    afterward via delete_entry.
+I2. write_entry(calling_role="tester") under TEST_PROJECT → confirm the resulting
+    storage-audit.log line's calling_role is exactly "tester" (not "unknown"), validating
+    role propagation end-to-end.
+
+=== CLEANUP ===
+Soft-delete every entry you created under TEST_PROJECT and the I1 entry under proj-csv.
+Do not attempt to hard-delete or touch the audit log — there is no tool for that by design.
+
+=== REPORT FORMAT ===
+Produce one markdown table per section (Storage: write/read/list/update/delete/isolation,
+Retrieval, Integration) with columns: Test ID | Expected | Actual | Result (PASS/FAIL).
+End with a summary line "X/Y tests passed" and a bulleted root-cause note for every FAIL,
+citing the specific file and line in server.py responsible for the observed behavior.

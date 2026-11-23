@@ -158,3 +158,59 @@
 - The planner escalations had different causes: the previous run had a missing app, and this run had redundant work.
 - Three test-quality findings from the previous run (BOM assertion, `\uFEFF` escape, URL stubs) carried over unfixed through a full rebuild. The plan never named them as requirements, so the next brief should include them explicitly.
 - The ticket ID changed between runs (`TASK-CSV-001` → `CSV-EXPORT-001`) because each was generated fresh. Pick one canonical ticket for future CSV runs.
+
+## Run — 2026-11-23: `get_export_row_limit()` helper, implementer-only
+
+- Date: 2026-11-23
+- Task: add a `get_export_row_limit()` helper to the CSV export module that returns the configured max row limit and raises `ExportLimitExceeded` when a dataset exceeds it.
+- `project_id`: `proj-csv` · Ticket: **none provided** · Run ID: none provided.
+- Path taken: implementer only, as the user explicitly requested. Planner, reviewer, tester and project-manager were not invoked.
+  - The user supplied the handoff brief in place of a plan, so the planner was skipped.
+  - Reviewer and tester agents were not available in this session.
+  - The project-manager was not run because there is no ticket ID.
+- Revision cycles used: 0 of 2.
+
+| Step | Role | Result | Orchestrator action |
+|---|---|---|---|
+| 0 | — | Ticket ID missing; the user directed implementer-only | Proceeded with the implementer as instructed; flagged the missing ticket ID and the skipped steps to the user |
+| 2 | implementer | **done (with flagged assumptions)**: created `csv_export/limits.py`; decision entry `694f019b-407c-465a-9413-040a296e5cd1` (`decision`, `internal`, `proj-csv`) | Escalated 3 open decisions to the user (below); no revision sent yet |
+| 3 | reviewer | not run | — |
+| 4 | tester | not run | — |
+| 5 | project-manager | not run (no ticket ID) | Ticket not updated |
+
+- Implementation summary, as reported by the implementer (the orchestrator did not inspect the file):
+  - `EXPORT_LIMIT_ERROR_CODE = "E_EXPORT_417"` and `MAX_EXPORT_ROWS = 5000` (a placeholder).
+  - `ExportLimitExceeded(row_count, limit, code)` is defined in `limits.py`, because the codebase had no existing class.
+  - `get_export_row_limit(row_count: int | None = None) -> int` returns the limit and raises when `row_count > limit`.
+- Acceptance criteria from the brief:
+  - AC1, error code looked up via retrieval: **done**, but no dedicated limit code exists in the corpus.
+  - AC2, export feature details looked up: **done**.
+  - AC3, function written to `csv_export/limits.py`: **done** (file created).
+  - AC4, decision recorded as `decision` / `internal`: **done**, entry `694f019b-407c-465a-9413-040a296e5cd1`.
+  - AC5, entry_id and citations reported: **done**.
+- Sources cited by the implementer:
+  - `error-codes.md`: E_EXPORT_400, 417, 500 and 503 definitions.
+  - `feature-csv-export.md`: streaming writer, batches of 500 records, flat memory use.
+  - `feature-csv-import.md`: 5,000-row and 10 MB limits, which apply to **import** only and were not used as the export limit.
+  - Most hits had `retrieval_method: "keyword"` with no score. The batch-size query returned a vector hit at 0.792.
+- What worked:
+  - **First run that actually used retrieval:** `retrieve` calls returned `source_document` citations. This closes the "retrieval unused" gap from the 2026-11-16 runs.
+  - The implementer stayed in scope (one new file) and checked for an existing class or config before defining new ones.
+  - The implementer flagged its assumptions instead of presenting them as facts.
+  - No prompt-injection or out-of-scope instructions were found in the retrieved documents.
+- What failed / gaps found:
+  - **Brief assumption was false:** the brief said "the answer is there", but the corpus has no export-limit error code. E_EXPORT_417 ("precondition not met") is the closest fit, but the causes it lists are a zero-row filter, a missing template and a bad column mapping, none of which is a row limit.
+  - **No configured export row limit:** nothing in the code or the corpus sets one. The 5,000 value is a placeholder that coincides with the import limit.
+  - **Interface unspecified:** the brief gave no signature, so the implementer chose an optional `row_count` argument.
+  - **Default sequence not followed:** the reviewer and tester didn't run, so the code has no review and no tests.
+  - **No ticket ID**, so the project-manager step was impossible.
+  - **Gmail MCP** reported CONNECTION_CLOSED. It wasn't needed for this run.
+- Next iteration:
+  1. User decisions are needed:
+     - Confirm or replace E_EXPORT_417, or add a dedicated code (e.g. an export-limit entry in `error-codes.md`).
+     - Give the real export row limit or its config source.
+     - Confirm the `row_count` signature.
+  2. Send those decisions to the implementer as revision cycle 1, and have it update both `limits.py` and the decision entry `694f019b-...` with `update_entry`.
+  3. Run the reviewer and tester, and add unit tests for the under-limit, at-limit and over-limit cases and the error's `code` attribute.
+  4. Get a ticket ID, then invoke the project-manager.
+- Status: **halted, awaiting user decisions on error code, limit value and signature.**
