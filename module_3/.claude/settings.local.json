@@ -9,7 +9,20 @@
       "mcp__retrieval__retrieve",
       "mcp__coursetools__file_write",
       "mcp__storage__write_entry",
-      "mcp__coursetools__test_runner"
+      "mcp__coursetools__test_runner",
+      "Bash(python3 -c \"import fastmcp\")",
+      "Read(//memory/reference/**)",
+      "Bash(python3 -c \"import fastmcp, sqlite_vec, sentence_transformers, uvicorn; print\\('ok'\\)\")",
+      "Bash(nohup python3 server.py)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(mkdir -p /tmp/claude-0/-workspace/5badffa1-2a52-449b-a61c-9f0f044067fc/scratchpad)",
+      "Bash(disown)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8002/mcp)",
+      "Bash(python3 run_ground_truth.py)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(find / -maxdepth 6 -type d -iname \"mcp\")",
+      "Bash(find / -maxdepth 8 -type d -iname \"module_3*\")",
+      "Bash(find / -maxdepth 8 -type f \\\\\\( -iname \"*storage*server*\" -o -iname \"*retrieval*server*\" \\\\\\))"
     ]
   },
   "enabledMcpjsonServers": [
